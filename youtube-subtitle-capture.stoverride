@@ -1,0 +1,21 @@
+name: YouTube Subtitle Capture
+
+http:
+  mitm:
+    - "www.youtube.com"
+    - "*.youtube.com"
+    - "video.google.com"
+
+  script:
+    - match: ^https:\/\/(www\.youtube\.com|video\.google\.com)\/api\/timedtext
+      name: youtube-subtitle-capture
+      type: response
+      require-body: true
+      timeout: 10
+      max-size: 2097152
+      debug: true
+
+script-providers:
+  youtube-subtitle-capture:
+    url: https://你的域名/youtube-subtitle-capture.js
+    interval: 86400
