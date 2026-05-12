@@ -11,7 +11,7 @@ http:
       name: youtube-subtitle-capture
       type: response
       require-body: true
-      timeout: 10
+      timeout: 30
       max-size: 2097152
       debug: true
 
