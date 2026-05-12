@@ -17,5 +17,5 @@ http:
 
 script-providers:
   youtube-subtitle-capture:
-    url: https://你的域名/youtube-subtitle-capture.js
+    url: https://raw.githubusercontent.com/openai1998/stash/main/youtube-subtitle-capture.js
     interval: 86400
