@@ -1,7 +1,7 @@
 // youtube-subtitle-capture.js
-// 功能：抓取 YouTube 字幕接口响应，解析字幕，写入 Stash 日志，并发送 Bark 通知
+// 功能：抓取 YouTube 字幕接口响应，解析字幕，写入 Stash 日志，并推送 ntfy 通知
 
-const BARK_KEY = "你的BarkKey"; // 不用 Bark 就留空：const BARK_KEY = "";
+const NTFY_TOPIC = "stash-youtube-2673949";
 
 let body = $response.body || "";
 let requestUrl = $request.url || "";
@@ -12,7 +12,6 @@ function decodeHtml(text) {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
     .replace(/&#39;/g, "'")
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
 }
@@ -26,12 +25,15 @@ function parseXmlTimedText(text) {
   const regex = /<text[^>]*start="([^"]*)"[^>]*?(?:dur="([^"]*)")?[^>]*>([\s\S]*?)<\/text>/g;
 
   let match;
+
   while ((match = regex.exec(text)) !== null) {
     const start = match[1] || "0";
     const dur = match[2] || "";
     let subtitle = match[3] || "";
 
-    subtitle = decodeHtml(stripTags(subtitle)).replace(/\s+/g, " ").trim();
+    subtitle = decodeHtml(stripTags(subtitle))
+      .replace(/\s+/g, " ")
+      .trim();
 
     if (subtitle) {
       results.push(`[${start}s${dur ? " +" + dur + "s" : ""}] ${subtitle}`);
@@ -51,6 +53,7 @@ function parseJson3(text) {
       if (!event.segs) continue;
 
       const start = event.tStartMs ? (event.tStartMs / 1000).toFixed(2) : "0";
+
       const subtitle = event.segs
         .map(seg => seg.utf8 || "")
         .join("")
@@ -76,8 +79,8 @@ function parseVtt(text) {
     .filter(line => {
       if (!line) return false;
       if (line === "WEBVTT") return false;
-      if (/^Kind:/.test(line)) return false;
-      if (/^Language:/.test(line)) return false;
+      if (/^Kind:/i.test(line)) return false;
+      if (/^Language:/i.test(line)) return false;
       return true;
     })
     .join("\n");
@@ -103,24 +106,27 @@ function extractSubtitle(text) {
   return t;
 }
 
-function barkNotify(title, content) {
-  if (!BARK_KEY) return;
+function ntfyNotify(title, content) {
+  if (!NTFY_TOPIC) return;
 
-  const url =
-    "https://api.day.app/" +
-    encodeURIComponent(BARK_KEY) +
-    "/" +
-    encodeURIComponent(title) +
-    "/" +
-    encodeURIComponent(content);
-
-  $httpClient.get({ url, timeout: 10 }, (error) => {
-    if (error) {
-      console.log("Bark 推送失败: " + error);
-    } else {
-      console.log("Bark 推送成功");
+  $httpClient.post(
+    {
+      url: "https://ntfy.sh/" + encodeURIComponent(NTFY_TOPIC),
+      headers: {
+        "Title": encodeURIComponent(title),
+        "Priority": "default"
+      },
+      body: content,
+      timeout: 10
+    },
+    error => {
+      if (error) {
+        console.log("ntfy 推送失败: " + error);
+      } else {
+        console.log("ntfy 推送成功");
+      }
     }
-  });
+  );
 }
 
 try {
@@ -142,9 +148,11 @@ try {
     $persistentStore.write(subtitle, "youtube_last_subtitle");
     $persistentStore.write(requestUrl, "youtube_last_subtitle_url");
 
-    barkNotify("YouTube 字幕已抓取", "已写入 Stash 日志，可打开日志复制");
+    ntfyNotify(
+      "YouTube 字幕已抓取",
+      "字幕已写入 Stash 日志。打开 Stash 日志搜索：YouTube Subtitle Captured"
+    );
 
-    // 不修改 YouTube 原字幕，只旁路抓取
     $done({});
   }
 } catch (e) {
