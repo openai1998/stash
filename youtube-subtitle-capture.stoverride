@@ -2,12 +2,13 @@ name: YouTube Subtitle Capture
 
 http:
   mitm:
-    - "www.youtube.com"
+    - "youtube.com"
     - "*.youtube.com"
     - "video.google.com"
+    - "*.googlevideo.com"
 
   script:
-    - match: ^https:\/\/(www\.youtube\.com|video\.google\.com)\/api\/timedtext
+    - match: ^https:\/\/((www|m)\.youtube\.com|youtube\.com|video\.google\.com)\/api\/timedtext
       name: youtube-subtitle-capture
       type: response
       require-body: true
