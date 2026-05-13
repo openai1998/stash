@@ -1,5 +1,6 @@
 // youtube-subtitle-capture.js
-// 每个视频独立存储和推送完整字幕，不分段
+// 功能：抓取 YouTube 字幕接口响应，写入 Stash 日志，并通过 ntfy 推送完整字幕文本（不生成 attachment）
+
 const NTFY_TOPIC = "stash-youtube-2673949";
 
 let body = $response.body || "";
@@ -81,12 +82,16 @@ function sendNtfy(title, content, callback) {
   if (!NTFY_TOPIC) { callback && callback(); return; }
   $httpClient.post({
     url: "https://ntfy.sh/" + encodeURIComponent(NTFY_TOPIC),
-    headers: { "Title": title, "Priority": "default" },
-    body: content,
+    headers: {
+      "Title": title,
+      "Priority": "default",
+      "Content-Type": "text/plain; charset=utf-8"  // 确保是纯文本
+    },
+    body: content,  // 直接文本，不生成 attachment
     timeout: 10
   }, (error, resp, data) => {
     if (error) console.log("ntfy 推送失败: " + error);
-    else console.log("ntfy 推送成功: " + data);
+    else console.log("ntfy 推送成功: " + title);
     callback && callback();
   });
 }
