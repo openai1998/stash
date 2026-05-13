@@ -21,7 +21,7 @@ http:
 script-providers:
   youtube-subtitle-capture:
     url: https://raw.githubusercontent.com/openai1998/stash/main/youtube-subtitle-capture.js
-    interval: 600
+    interval: 60  # Tile 每分钟刷新一次
 
 tiles:
   - name: youtube-subtitle-capture
