@@ -1,0 +1,44 @@
+name: YouTube 全面去广告
+desc: 全面屏蔽视频广告、Shorts、Reels、统计请求，支持 PiP 和后台播放
+author: Maasea
+homepage: https://yfamilys.com
+icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
+
+http:
+  mitm:
+    - "*.googlevideo.com"
+    - "www.youtube.com"
+    - "s.youtube.com"
+    - "youtubei.googleapis.com"
+
+  # HTTP Rewrite 脚本，拦截主要 YouTube API
+  script:
+    - match: /youtubei\.googleapis\.com\/youtubei\/v1\//
+      name: YouTubeAdBlocker
+      type: response
+      require-body: true
+      binary-mode: true
+      timeout: 10
+
+  # Rewrite 规则逐条拆开，避免复杂替换报错
+  rewrite:
+    # 视频广告屏蔽
+    - ^https?:\/\/[\w-]+\.googlevideo\.com\/(?!dclk_video_ads).* - reject-200
+    - ^https?:\/\/[\w-]+\.googlevideo\.com\/(?!videoplayback\?).*&oad - reject-200
+
+    # 广告统计 / tracking 屏蔽
+    - ^https?:\/\/(www|s)\.youtube\.com\/api\/stats\/ads - reject-200
+    - ^https?:\/\/(www|s)\.youtube\.com\/api\/stats\/qoe\?adcontext - reject-200
+    - ^https?:\/\/(www|s)\.youtube\.com\/(pagead|ptracking) - reject-200
+
+    # Shorts / Reels 广告屏蔽
+    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/reel\/reel_watch_sequence - reject-200
+    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/player - reject-200
+    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/next - reject-200
+    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/browse - reject-200
+    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/search - reject-200
+
+script-providers:
+  YouTubeAdBlocker:
+    url: https://raw.githubusercontent.com/Maasea/sgmodule/master/Script/Youtube/youtube.response.js
+    interval: 86400
