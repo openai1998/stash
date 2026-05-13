@@ -22,6 +22,7 @@ function stripTags(text) {
 
 function parseXmlTimedText(text) {
   const results = [];
+
   const regex = /<text[^>]*start="([^"]*)"[^>]*?(?:dur="([^"]*)")?[^>]*>([\s\S]*?)<\/text>/g;
 
   let match;
@@ -52,7 +53,9 @@ function parseJson3(text) {
     for (const event of events) {
       if (!event.segs) continue;
 
-      const start = event.tStartMs ? (event.tStartMs / 1000).toFixed(2) : "0";
+      const start = event.tStartMs
+        ? (event.tStartMs / 1000).toFixed(2)
+        : "0";
 
       const subtitle = event.segs
         .map(seg => seg.utf8 || "")
@@ -106,25 +109,31 @@ function extractSubtitle(text) {
   return t;
 }
 
-function ntfyNotify(title, content) {
-  if (!NTFY_TOPIC) return;
+function sendNtfy(title, content, callback) {
+  if (!NTFY_TOPIC) {
+    callback && callback();
+    return;
+  }
 
   $httpClient.post(
     {
       url: "https://ntfy.sh/" + encodeURIComponent(NTFY_TOPIC),
       headers: {
         "Title": encodeURIComponent(title),
-        "Priority": "default"
+        "Priority": "default",
+        "Tags": "movie"
       },
       body: content,
       timeout: 10
     },
-    error => {
+    (error, response, data) => {
       if (error) {
         console.log("ntfy 推送失败: " + error);
       } else {
-        console.log("ntfy 推送成功");
+        console.log("ntfy 推送成功: " + data);
       }
+
+      callback && callback();
     }
   );
 }
@@ -148,12 +157,19 @@ try {
     $persistentStore.write(subtitle, "youtube_last_subtitle");
     $persistentStore.write(requestUrl, "youtube_last_subtitle_url");
 
-    ntfyNotify(
-      "YouTube 字幕已抓取",
-      "字幕已写入 Stash 日志。打开 Stash 日志搜索：YouTube Subtitle Captured"
-    );
+    const notifyText =
+      "YouTube 字幕已抓取成功\n\n" +
+      "请打开 Stash 日志搜索：YouTube Subtitle Captured\n\n" +
+      "字幕预览：\n" +
+      subtitle.slice(0, 800);
 
-    $done({});
+    sendNtfy(
+      "YouTube Subtitle Captured",
+      notifyText,
+      () => {
+        $done({});
+      }
+    );
   }
 } catch (e) {
   console.log("YouTube 字幕抓取失败: " + e);
