@@ -8,7 +8,7 @@ http:
     - "*.youtube.com"
     - "video.google.com"
     - "*.googlevideo.com"
-    - "youtubei.googleapis.com"  # 移动端 App 字幕接口
+    - "youtubei.googleapis.com"
 
   script:
     - match: /timedtext|youtubei|captions/
@@ -22,12 +22,4 @@ http:
 script-providers:
   youtube-subtitle-capture:
     url: https://raw.githubusercontent.com/openai1998/stash/main/youtube-subtitle-capture.js
-    interval: 60  # Tile 每分钟刷新一次
-
-tiles:
-  - name: youtube-subtitle-capture
-    title: YouTube 字幕
-    content: 等待抓取…
-    icon: play.rectangle
-    backgroundColor: "#888888"
-    url: "https://www.youtube.com"
+    interval: 86400  # 每天更新一次脚本
