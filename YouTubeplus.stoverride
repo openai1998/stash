@@ -1,5 +1,5 @@
-name: YouTube 全面去广告
-desc: 全面屏蔽视频广告、Shorts、Reels、统计请求，支持 PiP 和后台播放
+name: YouTube 去广告精准版
+desc: 屏蔽 YouTube 广告和统计请求，支持 PiP / 后台播放，保持主视频流正常
 author: Maasea
 homepage: https://yfamilys.com
 icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
@@ -11,8 +11,8 @@ http:
     - "s.youtube.com"
     - "youtubei.googleapis.com"
 
-  # HTTP Rewrite 脚本，拦截主要 YouTube API
   script:
+    # 拦截主要 API，用于广告分析或替换逻辑
     - match: /youtubei\.googleapis\.com\/youtubei\/v1\//
       name: YouTubeAdBlocker
       type: response
@@ -20,23 +20,19 @@ http:
       binary-mode: true
       timeout: 10
 
-  # Rewrite 规则逐条拆开，避免复杂替换报错
   rewrite:
-    # 视频广告屏蔽
-    - ^https?:\/\/[\w-]+\.googlevideo\.com\/(?!dclk_video_ads).* - reject-200
-    - ^https?:\/\/[\w-]+\.googlevideo\.com\/(?!videoplayback\?).*&oad - reject-200
+    # === 广告屏蔽，只拦截明确广告 URL ===
+    - ^https?:\/\/[\w-]+\.googlevideo\.com\/.*dclk_video_ads.* - reject-200
+    - ^https?:\/\/[\w-]+\.googlevideo\.com\/.*&ad=.* - reject-200
+    - ^https?:\/\/[\w-]+\.googlevideo\.com\/.*&oad=.* - reject-200
 
-    # 广告统计 / tracking 屏蔽
+    # === 广告统计和 tracking ===
     - ^https?:\/\/(www|s)\.youtube\.com\/api\/stats\/ads - reject-200
-    - ^https?:\/\/(www|s)\.youtube\.com\/api\/stats\/qoe\?adcontext - reject-200
     - ^https?:\/\/(www|s)\.youtube\.com\/(pagead|ptracking) - reject-200
+    - ^https?:\/\/s\.youtube\.com\/api\/stats\/qoe\?adcontext - reject-200
 
-    # Shorts / Reels 广告屏蔽
-    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/reel\/reel_watch_sequence - reject-200
-    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/player - reject-200
-    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/next - reject-200
-    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/browse - reject-200
-    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/search - reject-200
+    # === Shorts / Reels 广告 ===
+    - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/reel\/reel_watch_sequence.* - reject-200
 
 script-providers:
   YouTubeAdBlocker:
