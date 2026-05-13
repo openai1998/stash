@@ -1,6 +1,6 @@
 #SUBSCRIBED https://raw.githubusercontent.com/openai1998/stash/main/youtube-subtitle-capture.js
 
-name: YouTube Subtitle + Tile (单文件)
+name: YouTube 字幕抓取
 
 http:
   mitm:
@@ -10,22 +10,23 @@ http:
     - "*.googlevideo.com"
 
   script:
-    - match: ^https:\/\/((www|m)\.youtube\.com|youtube\.com|video\.google\.com)\/api\/timedtext
+    - match: timedtext
       name: youtube-subtitle-capture
       type: response
       require-body: true
       timeout: 30
       max-size: 2097152
+      debug: true
 
 script-providers:
   youtube-subtitle-capture:
     url: https://raw.githubusercontent.com/openai1998/stash/main/youtube-subtitle-capture.js
-    interval: 600  # Tile 每 10 分钟刷新一次，HTTP 抓取按请求
+    interval: 600
 
 tiles:
   - name: youtube-subtitle-capture
     title: YouTube 字幕
-    content: 等待抓取...
+    content: 等待抓取…
     icon: play.rectangle
     backgroundColor: "#888888"
     url: "https://www.youtube.com"
