@@ -1,22 +1,23 @@
 // youtube-subtitle-capture.js
 // 单文件管理抓取 + Tile + ntfy
-// 修复 $persistentStore.keys() 报错
+// 修复 $persistentStore.keys() 和 $httpClient.callbacks 报错
 
 const NTFY_TOPIC = "stash-youtube-2673949";
 
-// 简化字幕解析
+// 字幕解析函数
 function extractText(text){
     if(!text) return "";
     if(text.includes("<text")) return text.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
-    if(text.startsWith("{")) try{ return JSON.parse(text).events.map(e=>e.segs?.map(s=>s.utf8||"").join("")).join(" ") }catch{}
-    if(text.includes("-->")||text.includes("WEBVTT")) return text;
+    if(text.startsWith("{")) try { 
+        return JSON.parse(text).events.map(e => e.segs?.map(s => s.utf8 || "").join("")).join(" "); 
+    } catch{}
+    if(text.includes("-->") || text.includes("WEBVTT")) return text;
     return text;
 }
 
-// 判断执行环境
-if(typeof $response !== "undefined" && typeof $request !== "undefined") {
-    // === HTTP Rewrite 抓取字幕 + 标题 + ntfy ===
-    try {
+// HTTP Rewrite 环境
+if(typeof $response !== "undefined" && typeof $request !== "undefined"){
+    try{
         const body = $response.body || "";
         const url = $request.url || "";
         const vidMatch = url.match(/v=([^&]+)/);
@@ -26,7 +27,8 @@ if(typeof $response !== "undefined" && typeof $request !== "undefined") {
         if(subtitle){
             $persistentStore.write(subtitle, `youtube_subtitle_${videoId}`);
             $persistentStore.write(url, `youtube_subtitle_url_${videoId}`);
-            $persistentStore.write(videoId, "youtube_latest_id"); // 固定 key，Tile 读取
+            // 写固定 key 供 Tile 读取
+            $persistentStore.write(videoId, "youtube_latest_id");
         }
 
         // 异步抓取视频标题
@@ -47,7 +49,7 @@ if(typeof $response !== "undefined" && typeof $request !== "undefined") {
                 }, ()=>{});
             }
 
-            // === 立即刷新 Tile ===
+            // 立即刷新 Tile
             const status = subtitle ? "✅ 已抓取" : "❌ 无字幕";
             $done({
                 title:"YouTube 字幕",
@@ -63,7 +65,7 @@ if(typeof $response !== "undefined" && typeof $request !== "undefined") {
         $done({});
     }
 } else {
-    // === Tile 分支定时刷新，读取最新视频 ===
+    // Tile 环境
     const latestId = $persistentStore.read("youtube_latest_id");
     if(!latestId){
         $done({
