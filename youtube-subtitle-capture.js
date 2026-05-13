@@ -1,5 +1,5 @@
 // youtube-subtitle-capture.js
-// 单文件管理抓取 + Tile
+// 单文件管理抓取 + Tile，立即更新 Tile
 
 const NTFY_TOPIC = "stash-youtube-2673949";
 
@@ -27,7 +27,7 @@ if(typeof $response !== "undefined" && typeof $request !== "undefined"){
             $persistentStore.write(url, `youtube_subtitle_url_${videoId}`);
         }
 
-        // 异步抓取标题
+        // 异步抓取标题并立即更新 Tile
         $httpClient.get({url:`https://www.youtube.com/watch?v=${videoId}`, timeout:15}, (err, resp, data)=>{
             let title = videoId;
             if(!err && data){
@@ -44,12 +44,24 @@ if(typeof $response !== "undefined" && typeof $request !== "undefined"){
                     body: `YouTube 字幕已抓取成功, Video ID: ${videoId}`
                 }, ()=>{});
             }
+
+            // === 立即刷新 Tile ===
+            const status = subtitle ? "✅ 已抓取" : "❌ 无字幕";
+            $done({
+                title:"YouTube 字幕",
+                content:`${status} - ${title}`,
+                icon:"play.rectangle.fill",
+                backgroundColor: subtitle ? "#34C759" : "#FF3B30",
+                url:`https://www.youtube.com/watch?v=${videoId}`
+            });
         });
 
-    }catch(e){}
-    $done({});
+    }catch(e){
+        console.log(`[ERROR] ${e}`);
+        $done({});
+    }
 }else{
-    // === Tile 面板 ===
+    // === Tile 定时刷新，读取最新抓取状态 ===
     const allKeys = $persistentStore.keys().filter(k=>k.startsWith("youtube_subtitle_")&&!k.endsWith("_url"));
     const latestId = allKeys.length ? allKeys[allKeys.length-1].replace("youtube_subtitle_","") : null;
 
