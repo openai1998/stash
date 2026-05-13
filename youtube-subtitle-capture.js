@@ -1,5 +1,6 @@
 // youtube-subtitle-capture.js
-// 单文件管理抓取 + Tile，立即刷新 Tile 和 ntfy
+// 单文件管理抓取 + Tile + ntfy
+// 修复 $persistentStore.keys() 报错
 
 const NTFY_TOPIC = "stash-youtube-2673949";
 
@@ -25,9 +26,10 @@ if(typeof $response !== "undefined" && typeof $request !== "undefined") {
         if(subtitle){
             $persistentStore.write(subtitle, `youtube_subtitle_${videoId}`);
             $persistentStore.write(url, `youtube_subtitle_url_${videoId}`);
+            $persistentStore.write(videoId, "youtube_latest_id"); // 固定 key，Tile 读取
         }
 
-        // 异步抓取标题
+        // 异步抓取视频标题
         $httpClient.get({url:`https://www.youtube.com/watch?v=${videoId}`, timeout:15}, (err, resp, data)=>{
             let title = videoId;
             if(!err && data){
@@ -56,15 +58,13 @@ if(typeof $response !== "undefined" && typeof $request !== "undefined") {
             });
         });
 
-    } catch(e) {
+    } catch(e){
         console.log(`[ERROR] YouTube 抓取失败: ${e}`);
         $done({});
     }
 } else {
-    // === Tile 定时刷新，读取最新抓取状态 ===
-    const allKeys = $persistentStore.keys().filter(k=>k.startsWith("youtube_subtitle_") && !k.endsWith("_url"));
-    const latestId = allKeys.length ? allKeys[allKeys.length-1].replace("youtube_subtitle_","") : null;
-
+    // === Tile 分支定时刷新，读取最新视频 ===
+    const latestId = $persistentStore.read("youtube_latest_id");
     if(!latestId){
         $done({
             title:"YouTube 字幕",
