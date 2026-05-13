@@ -1,5 +1,5 @@
-name: YouTube 去广告精准版
-desc: 屏蔽 YouTube 广告和统计请求，支持 PiP / 后台播放，保持主视频流正常
+name: YouTube 去开头广告精准版
+desc: 自动跳过开头广告，屏蔽广告流和统计请求，支持 PiP / 后台播放，保持主视频流正常
 author: Maasea
 homepage: https://yfamilys.com
 icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/YouTube.png
@@ -14,17 +14,20 @@ http:
   script:
     # 拦截主要 API，用于广告分析或替换逻辑
     - match: /youtubei\.googleapis\.com\/youtubei\/v1\//
-      name: YouTubeAdBlocker
+      name: YouTubeAdSkip
       type: response
       require-body: true
       binary-mode: true
       timeout: 10
 
   rewrite:
-    # === 广告屏蔽，只拦截明确广告 URL ===
+    # === 局部广告屏蔽，只针对开头广告流 ===
     - ^https?:\/\/[\w-]+\.googlevideo\.com\/.*dclk_video_ads.* - reject-200
     - ^https?:\/\/[\w-]+\.googlevideo\.com\/.*&ad=.* - reject-200
     - ^https?:\/\/[\w-]+\.googlevideo\.com\/.*&oad=.* - reject-200
+
+    # === 开头广告跳过：让 videoplayback 流从 5 秒开始 ===
+    - (^https?:\/\/[\w-]+\.googlevideo\.com\/videoplayback.*?)(?=&start=|$) $1&start=5 302
 
     # === 广告统计和 tracking ===
     - ^https?:\/\/(www|s)\.youtube\.com\/api\/stats\/ads - reject-200
@@ -35,6 +38,6 @@ http:
     - ^https?:\/\/youtubei\.googleapis\.com\/youtubei\/v1\/reel\/reel_watch_sequence.* - reject-200
 
 script-providers:
-  YouTubeAdBlocker:
+  YouTubeAdSkip:
     url: https://raw.githubusercontent.com/Maasea/sgmodule/master/Script/Youtube/youtube.response.js
     interval: 86400
