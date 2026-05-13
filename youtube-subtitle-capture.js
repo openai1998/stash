@@ -1,5 +1,6 @@
 // youtube-subtitle-capture.js
-// 改版：去除完整日志，只保留抓取、存储和 ntfy 通知
+// 改版：日志不存完整字幕，每个视频独立存储 persistentStore
+// ntfy 仅通知抓取完成
 
 const NTFY_TOPIC = "stash-youtube-2673949";
 
@@ -32,7 +33,8 @@ function parseXmlTimedText(text) {
   while ((match = regex.exec(text)) !== null) {
     const start = match[1] || "0";
     const dur = match[2] || "";
-    let subtitle = decodeHtml(stripTags(match[3] || "")).replace(/\s+/g, " ").trim();
+    let subtitle = match[3] || "";
+    subtitle = decodeHtml(stripTags(subtitle)).replace(/\s+/g, " ").trim();
     if (subtitle) results.push(`[${start}s${dur ? " +" + dur + "s" : ""}] ${subtitle}`);
   }
   return results.join("\n");
@@ -40,26 +42,27 @@ function parseXmlTimedText(text) {
 
 function parseJson3(text) {
   try {
-    const events = JSON.parse(text).events || [];
-    return events
-      .filter(e => e.segs)
-      .map(e => {
-        const start = e.tStartMs ? (e.tStartMs / 1000).toFixed(2) : "0";
-        const subtitle = e.segs.map(seg => seg.utf8 || "").join("").replace(/\s+/g, " ").trim();
-        return subtitle ? `[${start}s] ${subtitle}` : "";
-      })
-      .filter(Boolean)
-      .join("\n");
-  } catch {
-    return "";
-  }
+    const json = JSON.parse(text);
+    const events = json.events || [];
+    const results = [];
+    for (const event of events) {
+      if (!event.segs) continue;
+      const start = event.tStartMs ? (event.tStartMs / 1000).toFixed(2) : "0";
+      const subtitle = event.segs.map(seg => seg.utf8 || "").join("").replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+      if (subtitle) results.push(`[${start}s] ${subtitle}`);
+    }
+    return results.join("\n");
+  } catch (e) { return ""; }
 }
 
 function parseVtt(text) {
-  return text.split("\n")
-    .map(l => l.trim())
-    .filter(l => l && l !== "WEBVTT" && !/^Kind:/i.test(l) && !/^Language:/i.test(l))
-    .join("\n");
+  return text.split("\n").map(line => line.trim()).filter(line => {
+    if (!line) return false;
+    if (line === "WEBVTT") return false;
+    if (/^Kind:/i.test(line)) return false;
+    if (/^Language:/i.test(line)) return false;
+    return true;
+  }).join("\n");
 }
 
 function extractSubtitle(text) {
@@ -71,7 +74,7 @@ function extractSubtitle(text) {
   return t;
 }
 
-// ntfy 推送
+// ntfy 推送（仅通知抓取完成）
 function sendNtfy(title, callback) {
   if (!NTFY_TOPIC) { callback && callback(); return; }
   $httpClient.post({
@@ -83,20 +86,40 @@ function sendNtfy(title, callback) {
     },
     body: `YouTube 字幕已抓取成功，Video ID: ${title}`,
     timeout: 10
-  }, () => callback && callback());
+  }, (error, resp, data) => {
+    if (error) console.log("ntfy 推送失败: " + error);
+    else console.log("ntfy 推送成功: " + title);
+    callback && callback();
+  });
+}
+
+// 可选：清理旧日志（只保留调试信息）
+function cleanLogs() {
+  console.log("触发日志清理，可选实现");
+  // 实际实现可以调用 Stash 清理日志 API 或保留最近 N 天日志
 }
 
 try {
   const subtitle = extractSubtitle(body);
-  if (!subtitle) $done({});
-  else {
-    // persistentStore 存储字幕和 URL
+  if (!subtitle) {
+    console.log("没有解析到 YouTube 字幕内容");
+    $done({});
+  } else {
+    // 日志只保留调试信息
+    console.log(`[DEBUG] YouTube 字幕抓取完成，Video ID: ${videoId}`);
+
+    // persistentStore 存储视频字幕和 URL
     $persistentStore.write(subtitle, `youtube_subtitle_${videoId}`);
     $persistentStore.write(requestUrl, `youtube_subtitle_url_${videoId}`);
 
-    // ntfy 通知
-    sendNtfy(videoId, () => $done({}));
+    // ntfy 推送通知（不附加字幕内容）
+    sendNtfy(videoId, () => {
+      // 可选：触发日志清理
+      cleanLogs();
+      $done({});
+    });
   }
-} catch {
+} catch (e) {
+  console.log("YouTube 字幕抓取失败: " + e);
   $done({});
 }
