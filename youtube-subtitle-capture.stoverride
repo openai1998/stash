@@ -1,3 +1,5 @@
+#SUBSCRIBED https://raw.githubusercontent.com/openai1998/stash/main/youtube-subtitle-capture.stoverride
+
 name: YouTube Subtitle Capture
 
 http:
@@ -20,3 +22,12 @@ script-providers:
   youtube-subtitle-capture:
     url: https://raw.githubusercontent.com/openai1998/stash/main/youtube-subtitle-capture.js
     interval: 86400
+
+tiles:
+  - name: youtube-subtitle-capture
+    title: YouTube 字幕抓取
+    icon: play.rectangle.fill
+    collapsed: true
+    content: 等待抓取...
+    backgroundColor: "#34C759"
+    url: "https://www.youtube.com"
